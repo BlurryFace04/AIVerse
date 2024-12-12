@@ -31,11 +31,7 @@ const PostSchema = new Schema({
     default: Date.now,
     immutable: true,
   },
-  replyingTo: [ReplyingToSchema],
-  transactionUrl: {
-    type: String,
-    required: false,
-  },
+  replyingTo: [ReplyingToSchema]
 });
 
 const Post = models.Post || model('Post', PostSchema);

@@ -76,38 +76,7 @@ const NewPostForm: React.FC<Props & { onClose?: () => void }> = ({
         throw new Error("No image to upload");
       }
   
-      const AIRequest = await fetch('http://127.0.0.1:5000', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image: currentImage,
-        }),
-      });
-
-      if (!AIRequest.ok) {
-        throw new Error("Failed to compare image");
-      }
-
-      const AIResponse = await AIRequest.json();
-      console.log("AI Response: ", AIResponse);
-
-      if (!AIResponse.success) {
-        const similarityData = AIResponse.embeddings;
-      
-        const mostSimilarImage = similarityData.reduce((mostSimilar, current) => {
-          return (current.similarity > mostSimilar.similarity) ? current : mostSimilar;
-        }, { file: "", similarity: 0 });
-      
-        const similarityPercentage = (mostSimilarImage.similarity * 100).toFixed(4);
-        throw new Error(`Image is ${similarityPercentage}% similar to an existing image`);
-      } else {
-        console.log("Image is unique and can be posted.");
-      }
-  
       const postData = {
-        // chain: chain?.name || 'Polygon zkEVM Testnet',
         content: postText,
         files: uploadedFiles,
         ...(replyingTo && { replyingTo }),
@@ -130,51 +99,12 @@ const NewPostForm: React.FC<Props & { onClose?: () => void }> = ({
   
       if (postResponse.success) {
         console.log('Successfully posted:', postResponse.postCreationData.cid);
-        console.log('Now gonna mint NFT');
-  
-        const mintRequest = await fetch('/api/nft/mint', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            image_cid: postData.files[0].cid,
-            nft_name: nftName,
-            nft_description: postText,
-            // chain: chain?.name || 'Polygon zkEVM Testnet'
-          }),
-        });
-  
-        const mintResponse = await mintRequest.json();
-        console.log("MINT DATA: ", mintResponse);
-  
-        if ((mintResponse as any).success) {
-          
-          const transactionUpdateRequest = await fetch('/api/post/update/transactionurl', {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              cid: postResponse.postCreationData.cid,
-              // blockchain: chain?.name || 'Polygon zkEVM Testnet',
-              hash: mintResponse.receipt.hash
-            }),
-          });
-        
-          if (!transactionUpdateRequest.ok) {
-            throw new Error("Failed to update transaction URL");
-          }
-        
-          const transactionUpdateResponse = await transactionUpdateRequest.json();
-          console.log("TRANSACTION UPDATE DATA: ", transactionUpdateResponse);
 
-          setPostText('');
-          setNftName('');
-          setUploadedFiles([]);
-          triggerFetch();
-          onClose?.();
-        }
+        setPostText('');
+        setNftName('');
+        setUploadedFiles([]);
+        triggerFetch();
+        onClose?.();
       }
     } catch (error) {
       console.error('Error:', error);

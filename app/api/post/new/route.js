@@ -9,6 +9,7 @@ export const POST = async (req) => {
   await connectToDB();
 
   const session = await getServerSession(authOptions);
+  console.log("session: ", session);
 
   if (!session) {
     return new Response(
