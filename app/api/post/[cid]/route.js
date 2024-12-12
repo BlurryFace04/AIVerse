@@ -6,7 +6,8 @@ export const GET = async (req, { params }) => {
   try {
     await connectToDB();
 
-    const post = await Post.findOne({ cid: params.cid }).populate('creator');
+    const { cid } = await params;
+    const post = await Post.findOne({ cid }).populate('creator');
     if (!post) {
       return new Response('Post not found', { status: 404 });
     }
