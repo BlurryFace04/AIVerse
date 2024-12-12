@@ -1,12 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, use } from 'react';
 import { Loader2 } from "lucide-react";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator"
 import ReactMarkdown from 'react-markdown';
 
-export default function UserProfilePage({ params }) {
+interface Params {
+  address: string
+}
+
+export default function UserProfilePage({ params: paramsPromise }: { params: Promise<Params> }) {
+  const params = use(paramsPromise);
   const [user, setUser] = useState<any>(null);
   const [posts, setPosts] = useState<any>([]);
   const [loading, setLoading] = useState(true);

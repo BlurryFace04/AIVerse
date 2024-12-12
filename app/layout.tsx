@@ -9,6 +9,7 @@ import { PostUpdater } from '@/components/PostUpdater';
 import Header from "@/components/header";
 import { SessionProvider } from 'next-auth/react';
 import React from 'react';
+import SolanaProvider from '@/components/SolanaProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -44,12 +45,14 @@ export default function RootLayout({ children, session, ...props }) {
       <body className={inter.className}>
         <SessionProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <BlockchainProvider>
-              <PostUpdater>
-                <Header />
-                {mounted && children}
-              </PostUpdater>
-            </BlockchainProvider>
+            <SolanaProvider>
+              <BlockchainProvider>
+                <PostUpdater>
+                  <Header />
+                  {mounted && children}
+                </PostUpdater>
+              </BlockchainProvider>
+            </SolanaProvider>
           </ThemeProvider>
         </SessionProvider>
       </body>

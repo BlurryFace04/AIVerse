@@ -6,7 +6,7 @@ import User from '@/models/user';
 export const authOptions = {
   providers: [
     CredentialsProvider({
-      name: 'EVM',
+      name: 'Solana',
       credentials: {
         address: { label: 'Address', type: 'text' },
       },

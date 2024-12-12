@@ -6,7 +6,8 @@ export const GET = async (req, { params }) => {
   try {
     await connectToDB();
 
-    const user = await User.findOne({ address: params.address });
+    const { address } = await params;
+    const user = await User.findOne({ address });
 
     if (!user) return new Response('User not found', { status: 404 });
 
@@ -16,7 +17,7 @@ export const GET = async (req, { params }) => {
     
     console.log(`POSTS: ${posts}`);
 
-    console.log(`Received posts request for address: ${params.address}`);
+    console.log(`Received posts request for address: ${address}`);
 
     if (!posts || posts.length === 0) return new Response('Posts not found', { status: 404 });
 

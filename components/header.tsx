@@ -1,43 +1,65 @@
-import { ChevronRight, Droplets, LogOut } from "lucide-react";
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ModeToggle } from '@/components/dropdown';
-import { useSession, signIn, signOut } from 'next-auth/react';
-import { useRouter, usePathname } from 'next/navigation';
-import '@particle-network/connect-react-ui/dist/index.css';
-import { ConnectButton, useConnectKit } from '@particle-network/connect-react-ui';
-import { useAccount } from '@particle-network/connect-react-ui';
-import { ethers } from 'ethers';
+import { ChevronRight, Droplets, LogOut } from "lucide-react"
+import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { ModeToggle } from '@/components/dropdown'
+import { useSession, signIn, signOut, getCsrfToken } from 'next-auth/react'
+import { useRouter, usePathname } from 'next/navigation'
+import '@particle-network/connect-react-ui/dist/index.css'
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
+import { useWallet } from '@solana/wallet-adapter-react'
+import { SigninMessage } from "@/utils/SigninMessage"
+import bs58 from 'bs58'
 
 export default function Header() {
-  const router = useRouter();
-  const { data: session } = useSession();
-  const connectKit = useConnectKit();
-  const userInfo = connectKit.particle.auth.getUserInfo();
-  const pathname = usePathname();
-  const account = useAccount();
+  const router = useRouter()
+  const { data: session } = useSession()
+  const pathname = usePathname()
+
+  const { publicKey, signMessage } = useWallet()
 
   useEffect(() => {
-    console.log('Account:', account);
+    console.log('publicKey:', publicKey?.toBase58())
+  }, [publicKey])
+
+  useEffect(() => {
+    console.log('publicKey:', publicKey?.toBase58())
     const handleAuthFlow = async () => {
+      console.log('fucking session:', session)
       
-      if (account && !session) {
-        const checksumAddress = ethers.getAddress(account);
-        console.log('Account:', checksumAddress);
-        const response = await fetch(`/api/user/${checksumAddress}`);
+      if (publicKey && !session) {
+        const response = await fetch(`/api/user/${publicKey.toBase58()}`)
+        console.log('fucking response:', response)
 
         if (response.ok) {
-          signIn('credentials', { address: checksumAddress, redirect: false, callbackUrl: '/' })
+          const csrf = await getCsrfToken()
+          if (!csrf || !signMessage) return
+
+          const message = new SigninMessage({
+            domain: window.location.host,
+            publicKey: publicKey.toBase58(),
+            statement: `Sign this message to sign in to AIVerse.`,
+            nonce: csrf
+          });
+
+          const data = new TextEncoder().encode(message.prepare());
+          const signature = await signMessage(data);
+          const serializedSignature = bs58.encode(signature);
+
+          signIn('credentials', { 
+            address: publicKey.toBase58(),
+            redirect: false,
+            callbackUrl: '/'
+          })
         } else {  
-          router.push('/signup');
+          router.push('/signup')
         }
-      } else if (!account && session) {
+      } else if (!publicKey && session) {
         signOut({ redirect: false })
       }
-    };
+    }
 
-    handleAuthFlow();
-  }, [account, session, router]);
+    handleAuthFlow()
+  }, [publicKey, session, router])
 
   return (
     <nav className='border-b flex flex-col sm:flex-row items-start sm:items-center sm:pr-10'>
@@ -51,9 +73,10 @@ export default function Header() {
         </Link>
       </div>
       <div className='flex sm:items-center pl-8 pb-3 sm:p-0 gap-2'>
-        <ConnectButton />
+        <WalletMultiButton />
         <ModeToggle />
       </div>
     </nav>
-  );
+  )
 }
+// 

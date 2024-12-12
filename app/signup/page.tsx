@@ -21,8 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAccount } from '@particle-network/connect-react-ui';
-import { ethers } from 'ethers';
+import { useWallet } from '@solana/wallet-adapter-react'
 
 type UploadedFile = {
   cid: string;
@@ -37,21 +36,20 @@ const SignupPage: FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploadError, setUploadError] = useState('');
   const { data: session } = useSession();
-  const account = useAccount();
+  const { publicKey } = useWallet();
 
   const handleSignUp = async () => {
     try {
-      if (account && !session) {
-        const checksumAddress = ethers.getAddress(account);
+      if (publicKey && !session) {
         signIn('credentials', {
-          address: checksumAddress,
+          address: publicKey.toBase58(),
           name: name,
           username: username,
           image: uploadedFiles[0].cid,
           redirect: false,
           callbackUrl: '/',
         });
-      } else if (!account && session) {
+      } else if (!publicKey && session) {
         signOut({ redirect: false });
       }
       router.push('/');
