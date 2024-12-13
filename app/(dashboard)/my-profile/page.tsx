@@ -33,13 +33,13 @@ export default function MyProfilePage() {
         const sortedPosts = postsData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         const postDataWithImages = await Promise.all(sortedPosts.map(async post => {
-          const imageResponse = await fetch(`/api/post/${post.cid}`);
-          const imageData = await imageResponse.json();
-          console.log("Image: ", imageData);
+          const postResponse = await fetch(`/api/post/${post._id}`);
+          const postData = await postResponse.json();
+          console.log("Post: ", postData);
           return {
             ...post,
-            imageCid: imageData.cid,
-            content: imageData.content
+            ...(postData.url && { imageUrl: postData.url }),
+            content: postData.content
           };
         }));
         
@@ -92,16 +92,16 @@ export default function MyProfilePage() {
           }
         </div>
           {posts.map((post, index) => (
-            <React.Fragment key={post.cid}>
+            <React.Fragment key={post._id}>
               <div className="space-y-3 mb-4 pt-6 pb-2 sm:px-6 px-2">
                 <div>
-                  <a href={post.transactionUrl} target="_blank" rel="noopener noreferrer">
+                  {post.imageUrl && (
                     <img
                       className="max-w-full sm:max-w-[500px] rounded-2xl h-auto object-cover transition-all hover:scale-105"
-                      src={`https://gateway.lighthouse.storage/ipfs/${post.imageCid}`}
+                      src={post.imageUrl}
                       alt={`Post by ${post.creator.name}`}
                     />
-                  </a>
+                  )}
                 </div>
                 <div>
                   <ReactMarkdown className="mt-4 break-words">

@@ -6,27 +6,31 @@ export const GET = async (req, { params }) => {
   try {
     await connectToDB();
 
-    const { cid } = await params;
-    const post = await Post.findOne({ cid }).populate('creator');
+    const { id } = await params;
+    const post = await Post.findOne({ _id: id }).populate('creator');
     if (!post) {
       return new Response('Post not found', { status: 404 });
     }
 
-    const response = await fetch(`${process.env.LIGHTHOUSE_GATEWAY}/${post.cid}`);
+    const response = await fetch(post.url);
     if (!response.ok) {
       return new Response('Failed to fetch post data', { status: 500 });
     }
 
     const postData = await response.json();
+
     if (!postData.files || postData.files.length === 0) {
-      return new Response('No image found for this post', { status: 404 });
+      return new Response(JSON.stringify({ content: postData.content }), {
+        status: 200
+      });
     }
 
-    const fileCID = postData.files[0].cid;
+    const fileUrl = postData.files[0].url;
 
-    return new Response(JSON.stringify({ cid: fileCID, content: postData.content }), {
-      status: 200, headers: {'Content-Type': 'application/json'}
+    return new Response(JSON.stringify({ url: fileUrl, content: postData.content }), {
+      status: 200
     });
+
   } catch (error) {
     console.error(error);
     return new Response('Failed to fetch post', { status: 500 });

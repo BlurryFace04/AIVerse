@@ -16,7 +16,7 @@ import { usePostUpdate } from '@/components/PostUpdater'
 
 type ReplyingTo = {
   address: string;
-  cid: string;
+  url: string;
 };
 
 interface Props {
@@ -26,9 +26,10 @@ interface Props {
 }
 
 type UploadedFile = {
-  cid: string;
+  url: string;
   name: string;
-  fileType: 'image' | 'video';
+  fileType: string;
+  // fileType: 'image' | 'video';
 };
 
 const NewPostForm: React.FC<Props & { onClose?: () => void }> = ({
@@ -38,7 +39,6 @@ const NewPostForm: React.FC<Props & { onClose?: () => void }> = ({
   onClose
 }) => {
   const { data: session } = useSession() || {};
-  const [nftName, setNftName] = useState('');
   const [postText, setPostText] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isPosting, setIsPosting] = useState(false);
@@ -50,17 +50,13 @@ const NewPostForm: React.FC<Props & { onClose?: () => void }> = ({
     setPostText(e.target.value);
   };
 
-  const handleNftNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNftName(e.target.value);
-  }
-
   const handleFileUpload = (file: UploadedFile) => {
     setUploadedFiles([...uploadedFiles, file]);
   };
 
-  const handleRemoveFile = (cid: string) => {
+  const handleRemoveFile = (url: string) => {
     setUploadedFiles((prevFiles) =>
-      prevFiles.filter((file) => file.cid !== cid)
+      prevFiles.filter((file) => file.url !== url)
     );
   };
 
@@ -69,12 +65,12 @@ const NewPostForm: React.FC<Props & { onClose?: () => void }> = ({
     setUploadError('');
   
     try {
-      const currentImage = uploadedFiles[0] ? "https://gateway.lighthouse.storage/ipfs/" + uploadedFiles[0].cid : null;
+      const currentImage = uploadedFiles[0] ? uploadedFiles[0].url : null;
       console.log("Current Image: ", currentImage)
   
-      if (!currentImage) {
-        throw new Error("No image to upload");
-      }
+      // if (!currentImage) {
+      //   throw new Error("No image to upload");
+      // }
   
       const postData = {
         content: postText,
@@ -101,7 +97,6 @@ const NewPostForm: React.FC<Props & { onClose?: () => void }> = ({
         console.log('Successfully posted:', postResponse.postCreationData.cid);
 
         setPostText('');
-        setNftName('');
         setUploadedFiles([]);
         triggerFetch();
         onClose?.();
@@ -118,16 +113,6 @@ const NewPostForm: React.FC<Props & { onClose?: () => void }> = ({
 
   return (
     <>
-    <div className="flex items-start">
-        <div className="flex-grow">
-          <Input
-            value={nftName}
-            onChange={handleNftNameChange}
-            placeholder="NFT Name"
-            className="mb-3"
-          />
-        </div>
-      </div>
       <div className="flex items-start">
         <div className="flex-grow">
           <Textarea
@@ -151,7 +136,7 @@ const NewPostForm: React.FC<Props & { onClose?: () => void }> = ({
             </button>
           </Upload>
           {uploadedFiles.map((file) => (
-            <div key={file.cid} className="flex items-center space-x-1">
+            <div key={file.url} className="flex items-center space-x-1">
               {file.fileType === 'image' ? (
                 <PhotoIcon width={20} />
               ) : (
@@ -159,7 +144,7 @@ const NewPostForm: React.FC<Props & { onClose?: () => void }> = ({
               )}
               <span className="text-sm">{file.name}</span>
               <button
-                onClick={() => handleRemoveFile(file.cid)}
+                onClick={() => handleRemoveFile(file.url)}
                 className="text-purple-500 hover:text-purple-600"
               >
                 <XMarkIcon width={14} />

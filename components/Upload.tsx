@@ -2,9 +2,10 @@
 import { useState, ChangeEvent, useRef, ReactNode } from 'react';
 
 type UploadedFile = {
-  cid: string;
+  url: string;
   name: string;
-  fileType: 'image';
+  // fileType: 'image';
+  fileType: string;
 };
 
 type Props = {
@@ -27,7 +28,7 @@ const Upload = (props: Props) => {
     if (files && files.length) {
       const file = files[0];
       const fileType = file.type.split('/')[0];
-      console.log("FILE TYPE: ", fileType)
+      console.log("FILE TYPE: ", file.type)
 
       if (fileType !== 'image') {
         props.onError?.('Only image files are allowed.');
@@ -47,10 +48,8 @@ const Upload = (props: Props) => {
 
         const data = await response.json();
 
-        if (data.success && data.ipfsHash && props.onFileUpload) {
-          const ipfsLink = `https://gateway.lighthouse.storage/ipfs/${data.ipfsHash}`;
-          console.log('Upload success:', ipfsLink);
-          props.onFileUpload({ cid: data.ipfsHash, name: file.name, fileType});
+        if (data.success && data.url && props.onFileUpload) {
+          props.onFileUpload({ url: data.url, name: file.name, fileType });
           resetInput();
         } else if (data.error && props.onError) {
           props.onError(data.error);

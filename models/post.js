@@ -2,7 +2,7 @@ import { Schema, model, models } from 'mongoose';
 import mongoose from 'mongoose';
 
 const ReplyingToSchema = new Schema({
-  cid: {
+  url: {
     type: String,
     required: true,
     immutable: true,
@@ -21,9 +21,9 @@ const PostSchema = new Schema({
     required: [true, 'Creator is required'],
     immutable: true,
   },
-  cid: {
+  url: {
     type: String,
-    required: [true, 'cid is required'],
+    required: [true, 'url is required'],
     immutable: true,
   },
   timestamp: {

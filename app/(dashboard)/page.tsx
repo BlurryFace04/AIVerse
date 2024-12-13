@@ -27,13 +27,13 @@ export default function Home() {
         const sortedPosts = data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         const postDataWithImages = await Promise.all(sortedPosts.map(async post => {
-          const imageResponse = await fetch(`/api/post/${post.cid}`);
-          const imageData = await imageResponse.json();
-          console.log("Image: ", imageData);
+          const postResponse = await fetch(`/api/post/${post._id}`);
+          const postData = await postResponse.json();
+          console.log("Post: ", postData);
           return {
             ...post,
-            imageCid: imageData.cid,
-            content: imageData.content
+            ...(postData.url && { imageUrl: postData.url }),
+            content: postData.content
           };
         }));
 
@@ -79,13 +79,13 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <a href={post.transactionUrl} target="_blank" rel="noopener noreferrer">
+                {post.imageUrl && (
                   <img
                     className="max-w-full sm:max-w-[500px] rounded-2xl h-auto object-cover transition-all hover:scale-105"
-                    src={`https://gateway.lighthouse.storage/ipfs/${post.imageCid}`}
+                    src={post.imageUrl}
                     alt={`Post by ${post.creator.name}`}
                   />
-                </a>
+                )}
               </div>
               <div>
                 <ReactMarkdown className="mt-4 break-words">

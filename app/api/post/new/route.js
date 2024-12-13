@@ -41,65 +41,112 @@ export const POST = async (req) => {
       files,
     };
 
-    if (replyingTo) {
-      let updatedReplyingTo = [replyingTo];
+    // if (replyingTo) {
+    //   let updatedReplyingTo = [replyingTo];
 
-      const user = await User.findOne({ address: replyingTo.address });
-      if (user) {
-        replyingTo.username = user.username;
+    //   const user = await User.findOne({ address: replyingTo.address });
+    //   if (user) {
+    //     replyingTo.username = user.username;
 
-        const response = await fetch(
-          `${process.env.PINATA_GATEWAY}/${replyingTo.cid}`
-        );
-        if (response.ok) {
-          const fetchedContent = await response.json();
-          if (fetchedContent.replyingTo) {
-            updatedReplyingTo = [
-              ...updatedReplyingTo,
-              ...fetchedContent.replyingTo,
-            ];
-            updatedReplyingTo = updatedReplyingTo.filter(
-              (item, index, self) =>
-                index ===
-                self.findIndex(
-                  (t) => t.cid === item.cid && t.address === item.address
-                )
-            );
-          }
-        }
-      }
-      pinData.replyingTo = updatedReplyingTo;
+    //     const response = await fetch(
+    //       `${process.env.PINATA_GATEWAY}/${replyingTo.cid}`
+    //     );
+    //     if (response.ok) {
+    //       const fetchedContent = await response.json();
+    //       if (fetchedContent.replyingTo) {
+    //         updatedReplyingTo = [
+    //           ...updatedReplyingTo,
+    //           ...fetchedContent.replyingTo,
+    //         ];
+    //         updatedReplyingTo = updatedReplyingTo.filter(
+    //           (item, index, self) =>
+    //             index ===
+    //             self.findIndex(
+    //               (t) => t.cid === item.cid && t.address === item.address
+    //             )
+    //         );
+    //       }
+    //     }
+    //   }
+    //   pinData.replyingTo = updatedReplyingTo;
+    // }
+
+    // Create a blob from the JSON data
+    const blob = new Blob([JSON.stringify(pinData)], { 
+      type: 'application/json' 
+    });
+    
+    // Create FormData and append the blob
+    const formData = new FormData();
+    formData.append('file', blob, 'post.json');
+
+    // Upload to Cloud Run
+    const uploadResponse = await fetch('https://aiverse-fast-435887166123.asia-south1.run.app/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      throw new Error(`Upload failed: ${errorText}`);
     }
 
-    const result = await lighthouse.uploadText(
-      JSON.stringify(pinData),
-      process.env.LIGHTHOUSE_API_KEY
-    )
+    const result = await uploadResponse.json();
+    console.log('Upload result:', result);
 
-    if (result.data) {
+    if (result.url) {
       let postCreationData = {
         creator: session.user.id,
-        cid: result.data.Hash
+        url: result.url
       };
 
       if (pinData.replyingTo) {
         postCreationData.replyingTo = pinData.replyingTo.map((reply) => ({
-          cid: reply.cid,
+          url: reply.url,
           address: reply.address,
         }));
       }
 
-      await Post.create(postCreationData);
+      const newPost = await Post.create(postCreationData);
+      console.log('Created post:', newPost);
 
       return new Response(JSON.stringify({ success: true, postCreationData }), {
         status: 200,
       });
+
     } else {
-      return new Response(
-        JSON.stringify({ error: 'Failed to upload to Lighthouse' }),
-        { status: 500 }
-      );
+      throw new Error('Failed to upload to GCP');
     }
+
+    // const result = await lighthouse.uploadText(
+    //   JSON.stringify(pinData),
+    //   process.env.LIGHTHOUSE_API_KEY
+    // )
+
+    // if (result.data) {
+    //   let postCreationData = {
+    //     creator: session.user.id,
+    //     cid: result.data.Hash
+    //   };
+
+    //   if (pinData.replyingTo) {
+    //     postCreationData.replyingTo = pinData.replyingTo.map((reply) => ({
+    //       cid: reply.cid,
+    //       address: reply.address,
+    //     }));
+    //   }
+
+    //   await Post.create(postCreationData);
+
+    //   return new Response(JSON.stringify({ success: true, postCreationData }), {
+    //     status: 200,
+    //   });
+    // } else {
+    //   return new Response(
+    //     JSON.stringify({ error: 'Failed to upload to Lighthouse' }),
+    //     { status: 500 }
+    //   );
+    // }
   } catch (error) {
     console.error(error);
     return new Response(error, { status: 500 });
