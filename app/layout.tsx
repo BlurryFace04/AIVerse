@@ -1,17 +1,16 @@
-'use client'
+"use client";
 
-import './globals.css';
-import '@rainbow-me/rainbowkit/styles.css';
-import { Inter } from 'next/font/google';
+import "./globals.css";
+import "@rainbow-me/rainbowkit/styles.css";
+import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { BlockchainProvider } from "@/components/BlockchainProvider";
-import { PostUpdater } from '@/components/PostUpdater';
+import { PostUpdater } from "@/components/PostUpdater";
 import Header from "@/components/header";
-import { SessionProvider } from 'next-auth/react';
-import React from 'react';
-import SolanaProvider from '@/components/SolanaProvider';
+import { SessionProvider } from "next-auth/react";
+import React from "react";
+import SolanaProvider from "@/components/SolanaProvider";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({ children, session, ...props }) {
   const [mounted, setMounted] = React.useState(false);
@@ -30,7 +29,7 @@ export default function RootLayout({ children, session, ...props }) {
       scrollbar-color: #222 transparent;
     `;
 
-    const styleSheet = document.createElement('style');
+    const styleSheet = document.createElement("style");
     styleSheet.innerText = styles;
     document.head.appendChild(styleSheet);
 
@@ -46,12 +45,10 @@ export default function RootLayout({ children, session, ...props }) {
         <SessionProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <SolanaProvider>
-              <BlockchainProvider>
-                <PostUpdater>
-                  <Header />
-                  {mounted && children}
-                </PostUpdater>
-              </BlockchainProvider>
+              <PostUpdater>
+                <Header />
+                {mounted && children}
+              </PostUpdater>
             </SolanaProvider>
           </ThemeProvider>
         </SessionProvider>

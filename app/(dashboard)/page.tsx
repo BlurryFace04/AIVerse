@@ -1,45 +1,55 @@
-'use client'
-import React, { useState, useEffect } from 'react'
-import { Loader2 } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import ReactMarkdown from 'react-markdown'
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { usePostUpdate } from '@/components/PostUpdater'
-import Link from 'next/link';
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import Post from "@/components/Feed/Post";
+import { usePostUpdate } from "@/components/PostUpdater";
 
 export default function Home() {
   const [posts, setPosts] = useState<any>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
-
   const { updateValue } = usePostUpdate();
-  const router = useRouter();
-  const { data: session } = (useSession() || {}) as any;
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch('/api/post/all/f');
+        console.log("Fetching posts...");
+        const response = await fetch("/api/post/all/f");
+        console.log("Response status:", response.status);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
-        console.log("Posts: ", data);
+        console.log("Received posts data:", data);
 
-        const sortedPosts = data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        if (!Array.isArray(data)) {
+          console.error("Data is not an array:", data);
+          setPosts([]);
+          return;
+        }
 
-        const postDataWithImages = await Promise.all(sortedPosts.map(async post => {
-          const postResponse = await fetch(`/api/post/${post._id}`);
-          const postData = await postResponse.json();
-          console.log("Post: ", postData);
-          return {
-            ...post,
-            ...(postData.url && { imageUrl: postData.url }),
-            content: postData.content
-          };
-        }));
+        // Verify that each post has content
+        const validPosts = data.filter((post) => {
+          const isValid = post && post.content;
+          if (!isValid) {
+            console.warn("Invalid post found:", post);
+          }
+          return isValid;
+        });
 
-        setPosts(postDataWithImages);
+        // Sort posts by timestamp
+        const sortedPosts = validPosts.sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+
+        console.log("Sorted and validated posts:", sortedPosts);
+        setPosts(sortedPosts);
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching posts:", error);
+        setPosts([]);
       } finally {
         setLoadingPosts(false);
       }
@@ -48,55 +58,29 @@ export default function Home() {
     fetchPosts();
   }, [updateValue]);
 
+  if (loadingPosts) {
+    return (
+      <div className="flex flex-1 justify-center items-center min-h-screen">
+        <Loader2 className="h-12 w-12 animate-spin" />
+      </div>
+    );
+  }
+
+  if (posts.length === 0) {
+    return (
+      <div className="flex flex-1 justify-center items-center min-h-[200px] text-muted-foreground">
+        No posts found
+      </div>
+    );
+  }
+
   return (
-    <div className="sm:border-t sm:border-r sm:border-b rounded-tr rounded-br flex flex-1 pb-1 custom-scroll">
-      <div className="flex flex-1 flex-wrap flex-col">
-        {
-          loadingPosts && (
-            <div className="
-              flex flex-1 justify-center items-center
-            ">
-              <Loader2 className="h-12 w-12 animate-spin" />
-            </div>
-          )
-        }
-        {posts.map((post, index) => (
-          <React.Fragment key={post.cid}>
-            <div className="space-y-3 mb-4 pt-6 pb-2 sm:px-6 px-2">
-              <div className="flex items-center pb-2">
-                <Link href={`/${post.creator.address}`}>
-                  <Avatar className='h-12 w-12 transition-all hover:scale-110'>
-                    <AvatarImage
-                      className="object-cover w-full h-full"
-                      src={`https://gateway.lighthouse.storage/ipfs/${post.creator.profilePicture}`}
-                    />
-                    <AvatarFallback>{post.creator.name}</AvatarFallback>
-                  </Avatar>
-                </Link>
-                <div className="ml-4">
-                  <h3 className="mb-1 font-medium leading-none">{post.creator.username}</h3>
-                  <p className="text-xs text-muted-foreground">{post.creator.name}</p>
-                </div>
-              </div>
-              <div>
-                {post.imageUrl && (
-                  <img
-                    className="max-w-full sm:max-w-[500px] rounded-2xl h-auto object-cover transition-all hover:scale-105"
-                    src={post.imageUrl}
-                    alt={`Post by ${post.creator.name}`}
-                  />
-                )}
-              </div>
-              <div>
-                <ReactMarkdown className="mt-4 break-words">
-                  {post.content.replace(/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, '[LINK]($1)')}
-                </ReactMarkdown>
-              </div>
-            </div>
-            {index !== posts.length - 1 && <Separator />}
-          </React.Fragment>
+    <div className="w-1/2">
+      <div className="space-y-4">
+        {posts.map((post: any) => (
+          <Post key={post._id} post={post} />
         ))}
       </div>
     </div>
-  )
+  );
 }
