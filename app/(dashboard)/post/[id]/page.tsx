@@ -1,8 +1,13 @@
-import React from "react";
-import { notFound } from "next/navigation";
-import Post from "@/components/Feed/Post";
+"use client";
 
-async function getPost(id: string) {
+import React, { useEffect, useState } from "react";
+import { notFound, useParams } from "next/navigation";
+import Post, { PostProps } from "@/components/Feed/Post";
+import CommentForm from "@/components/Feed/CommentForm";
+
+type PostType = PostProps["post"];
+
+async function getPost(id: string): Promise<PostType | null> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     const res = await fetch(`${baseUrl}/api/post/${id}`, {
@@ -15,7 +20,7 @@ async function getPost(id: string) {
     }
 
     const data = await res.json();
-    console.log("Fetched post data:", data); // Debug log
+    console.log("Fetched post data:", data);
     return data;
   } catch (error) {
     console.error("Error fetching post:", error);
@@ -23,34 +28,35 @@ async function getPost(id: string) {
   }
 }
 
-export default async function PostPage({ params }: { params: { id: string } }) {
-  const post = await getPost(params.id);
+export default function PostPage() {
+  const params = useParams<{ id: string }>();
 
-  if (!post) {
-    notFound();
-  }
+  const [post, setPost] = useState<PostType | null>(null);
+  const [replies, setReplies] = useState<PostType[]>([]);
 
-  // Debug log
-  console.log("Post image URL:", post.imageUrl);
+  React.useEffect(() => {
+    const fetchPost = async () => {
+      const data = await getPost(params.id);
+      if (!data) notFound();
+      setPost(data);
+      setReplies(data.replies || []);
+    };
+    fetchPost();
+  }, [params.id]); // Changed from params.id to id
+
+  const handleCommentAdded = (newComment: PostType) => {
+    setReplies((prev) => [newComment, ...prev]);
+  };
+
+  if (!post) return null;
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      <Post
-        post={{
-          ...post,
-          imageUrl: post.imageUrl || post.url, // Fallback to url if imageUrl is not present
-        }}
-        isDetail={true}
-      />
+      <Post post={post} isDetail={true} onReplyAdded={handleCommentAdded} />
+      <CommentForm postId={post._id} onCommentAdded={handleCommentAdded} />
       <div className="border-t">
-        {post.replies?.map((reply) => (
-          <Post
-            key={reply._id}
-            post={{
-              ...reply,
-              imageUrl: reply.imageUrl || reply.url,
-            }}
-          />
+        {replies.map((reply) => (
+          <Post key={reply._id} post={reply} />
         ))}
       </div>
     </div>

@@ -1,13 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import PostHeader from "./PostHeader";
 import Link from "next/link";
 import PostContent from "./PostContent";
 import PostActions from "./PostActions";
+import { useSession } from "next-auth/react";
 
-interface PostProps {
+export interface PostProps {
   post: {
     _id: string;
     creator: {
@@ -27,15 +28,22 @@ interface PostProps {
     isReply?: boolean;
   };
   isDetail?: boolean;
+  onReplyAdded?: (reply: any) => void;
 }
 
-export const Post: React.FC<PostProps> = ({ post, isDetail = false }) => {
+export const Post: React.FC<PostProps> = ({
+  post,
+  isDetail = false,
+  onReplyAdded,
+}) => {
+  const { data: session } = (useSession() || {}) as any;
+  const [localLikes, setLocalLikes] = useState(post.likes);
+  const [localReplies, setLocalReplies] = useState(post.replies);
+
   if (!post) {
     console.warn("Post component received null/undefined post");
     return null;
   }
-
-  console.log("Rendering post:", post);
 
   const {
     _id,
@@ -43,35 +51,92 @@ export const Post: React.FC<PostProps> = ({ post, isDetail = false }) => {
     content,
     imageUrl,
     timestamp,
-    replies = [],
     reposts = [],
-    likes = [],
     isReply = false,
   } = post;
 
-  // Define handlers here since this is now a client component
   const handleLike = async () => {
-    console.log("liked");
+    if (!session?.user?.id) {
+      // Handle not logged in state - maybe show a login prompt
+      console.log("Please login to like posts");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/post/${_id}/like`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: session.user.id }),
+      });
+
+      if (res.ok) {
+        const updatedPost = await res.json();
+        setLocalLikes(updatedPost.likes);
+      }
+    } catch (error) {
+      console.error("Error liking post:", error);
+    }
   };
 
-  const handleReply = () => {
-    console.log("replied");
+  const handleReply = async (content: string) => {
+    if (!session?.user?.id) {
+      console.log("Please login to reply");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/post/${_id}/reply`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content,
+          userId: session.user.id,
+        }),
+      });
+
+      if (res.ok) {
+        const newReply = await res.json();
+        setLocalReplies((prev) => [newReply, ...prev]);
+        onReplyAdded?.(newReply);
+      }
+    } catch (error) {
+      console.error("Error posting reply:", error);
+    }
   };
 
   const handleRepost = async () => {
+    if (!session?.user?.id) {
+      console.log("Please login to repost");
+      return;
+    }
+    // Implement repost logic here
     console.log("reposted");
   };
 
   const handleShare = () => {
-    // Implement share logic
     if (navigator.share) {
-      navigator.share({
-        title: `Post by ${creator.username}`,
-        text: content,
-        url: `/post/${_id}`,
-      });
+      navigator
+        .share({
+          title: `Post by ${creator.username}`,
+          text: content,
+          url: `/post/${_id}`,
+        })
+        .catch((err) => console.error("Error sharing:", err));
+    } else {
+      // Fallback for browsers that don't support navigator.share
+      const url = `${window.location.origin}/post/${_id}`;
+      navigator.clipboard
+        .writeText(url)
+        .then(() => console.log("Link copied to clipboard"))
+        .catch((err) => console.error("Error copying to clipboard:", err));
     }
   };
+
+  const isLikedByCurrentUser = localLikes.includes(session?.user?.id || "");
 
   return (
     <Card className={`border-b ${isDetail ? "rounded-none border-x-0" : ""}`}>
@@ -80,13 +145,15 @@ export const Post: React.FC<PostProps> = ({ post, isDetail = false }) => {
         <PostContent content={content} imageUrl={imageUrl} />
       </Link>
       <PostActions
-        likes={likes}
-        replies={replies}
+        postId={_id}
+        likes={localLikes}
+        replies={localReplies}
         reposts={reposts}
         onLike={handleLike}
         onReply={handleReply}
         onRepost={handleRepost}
         onShare={handleShare}
+        isLiked={isLikedByCurrentUser}
         isAiAgent={creator.isAiAgent}
         creator={creator}
         isReply={isReply}

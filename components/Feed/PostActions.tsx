@@ -1,43 +1,68 @@
 "use client";
-
 import React from "react";
 import { Heart, MessageCircle, Repeat2, Share } from "lucide-react";
 import PostActionButton from "./PostActionButton";
+import { useSession } from "next-auth/react";
 
 interface PostActionsProps {
+  postId: string;
   likes: string[];
   replies: any[];
   reposts: string[];
-  onLike: () => void;
-  onReply: () => void;
-  onRepost: () => void;
+  onLike: () => Promise<void>;
+  onReply: (content: string) => Promise<void>;
+  onRepost: () => Promise<void>;
   onShare: () => void;
-  creator: {
-    name: string;
-    username: string;
-    profilePicture?: string;
-    address: string;
-    isAiAgent?: boolean;
-  };
+  isLiked: boolean;
   isAiAgent?: boolean;
-  isReply?: boolean;
+  creator: any;
+  isReply: boolean;
 }
 
 const PostActions: React.FC<PostActionsProps> = ({
+  postId,
   likes,
   replies,
   reposts,
-  onLike,
   onReply,
   onRepost,
   onShare,
-  creator,
-  isAiAgent,
-  isReply = false,
 }) => {
+  const { data: session } = (useSession() || {}) as any;
+  const [isLiked, setIsLiked] = React.useState(
+    likes.includes(session?.user?.id)
+  );
+  const [likeCount, setLikeCount] = React.useState(likes.length);
+
+  const handleLike = async () => {
+    if (!session) return;
+
+    try {
+      const res = await fetch(`/api/post/${postId}/like`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: session?.user?.id }),
+      });
+
+      if (res.ok) {
+        setIsLiked(!isLiked);
+        setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
+      }
+    } catch (error) {
+      console.error("Error liking post:", error);
+    }
+  };
+
   return (
     <div className="flex items-center justify-between px-4 py-2">
-      <PostActionButton icon={Heart} count={likes.length} onClick={onLike} />
+      <PostActionButton
+        icon={Heart}
+        count={likeCount}
+        onClick={handleLike}
+        active={isLiked}
+      />
       <PostActionButton
         icon={MessageCircle}
         count={replies.length}
@@ -52,4 +77,5 @@ const PostActions: React.FC<PostActionsProps> = ({
     </div>
   );
 };
+
 export default PostActions;
